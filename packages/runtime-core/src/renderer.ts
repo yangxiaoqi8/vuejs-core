@@ -366,6 +366,7 @@ function baseCreateRenderer(
     }
 
     // patching & not same type, unmount old tree
+    // 类型不一样，卸载节点
     if (n1 && !isSameVNodeType(n1, n2)) {
       anchor = getNextHostNode(n1)
       unmount(n1, parentComponent, parentSuspense, true)
@@ -387,6 +388,7 @@ function baseCreateRenderer(
         break
       case Static:
         if (n1 == null) {
+          // 旧节点为空，挂载新节点
           mountStaticNode(n2, container, anchor, isSVG)
         } else if (__DEV__) {
           patchStaticNode(n1, n2, container, isSVG)
@@ -1600,9 +1602,11 @@ function baseCreateRenderer(
     const { patchFlag, shapeFlag } = n2
     // fast path
     if (patchFlag > 0) {
+      // 判断是否有key，区别处理
       if (patchFlag & PatchFlags.KEYED_FRAGMENT) {
         // this could be either fully-keyed or mixed (some keyed some not)
         // presence of patchFlag means children are guaranteed to be arrays
+        // 有key
         patchKeyedChildren(
           c1 as VNode[],
           c2 as VNodeArrayChildren,
@@ -1616,6 +1620,7 @@ function baseCreateRenderer(
         )
         return
       } else if (patchFlag & PatchFlags.UNKEYED_FRAGMENT) {
+        // 无key
         // unkeyed
         patchUnkeyedChildren(
           c1 as VNode[],
@@ -1768,7 +1773,8 @@ function baseCreateRenderer(
       const n2 = (c2[i] = optimized
         ? cloneIfMounted(c2[i] as VNode)
         : normalizeVNode(c2[i]))
-      if (isSameVNodeType(n1, n2)) {
+      if (isSameVNodeType(n1, n2)) { 
+        // 如果类型和key都相等，进行对比。否则，退出（前序对比）
         patch(
           n1,
           n2,
@@ -1780,7 +1786,7 @@ function baseCreateRenderer(
           slotScopeIds,
           optimized
         )
-      } else {
+      } else {        
         break
       }
       i++
@@ -1789,6 +1795,7 @@ function baseCreateRenderer(
     // 2. sync from end
     // a (b c)
     // d e (b c)
+    //同理，尾序对比
     while (i <= e1 && i <= e2) {
       const n1 = c1[e1]
       const n2 = (c2[e2] = optimized
@@ -1820,6 +1827,7 @@ function baseCreateRenderer(
     // (a b)
     // c (a b)
     // i = 0, e1 = -1, e2 = 0
+    // 新增操作去挂载节点，patch第一个参数是null
     if (i > e1) {
       if (i <= e2) {
         const nextPos = e2 + 1
@@ -1850,6 +1858,7 @@ function baseCreateRenderer(
     // a (b c)
     // (b c)
     // i = 0, e1 = 0, e2 = -1
+    // 删除节点：当前节点i在旧节点中存在，但在新的节点中不存在，则删除节点。
     else if (i > e2) {
       while (i <= e1) {
         unmount(c1[i], parentComponent, parentSuspense, true)
@@ -1861,6 +1870,7 @@ function baseCreateRenderer(
     // [i ... e1 + 1]: a b [c d e] f g
     // [i ... e2 + 1]: a b [e d c h] f g
     // i = 2, e1 = 4, e2 = 5
+    // 乱序：把可以复用部分放入数组中
     else {
       const s1 = i // prev starting index
       const s2 = i // next starting index
